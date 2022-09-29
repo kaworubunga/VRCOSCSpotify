@@ -1,4 +1,4 @@
-### Fork of VRCOSCSpotify
+### Fork of [VRCOSCSpotify](https://github.com/lenoobwastaken/VRCOSCSpotify)
 
 #### Pre-requisites
  - dotnet core 5.0 https://dotnet.microsoft.com/en-us/download/dotnet/5.0
