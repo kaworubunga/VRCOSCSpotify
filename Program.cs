@@ -1,219 +1,145 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Management;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using SharpOSC;
-using OSC_Funnies;
-using System.IO;
 
 namespace OSC_Funnies
 {
     class Program
     {
-
-        public static float GetGPUUsage()
-        {
-            try
-            {
-                var category = new PerformanceCounterCategory("GPU Engine");
-                var counterNames = category.GetInstanceNames();
-                var gpuCounters = new List<PerformanceCounter>();
-                var result = 0f;
-
-                foreach (string counterName in counterNames)
-                {
-                    if (counterName.EndsWith("engtype_3D"))
-                    {
-                        foreach (PerformanceCounter counter in category.GetCounters(counterName))
-                        {
-                            if (counter.CounterName == "Utilization Percentage")
-                            {
-                                gpuCounters.Add(counter);
-                            }
-                        }
-                    }
-                }
-
-                gpuCounters.ForEach(x =>
-                {
-                    _ = x.NextValue();
-                });
-
-                Thread.Sleep(1000);
-
-                gpuCounters.ForEach(x =>
-                {
-                    result += x.NextValue();
-                });
-
-                return result;
-            }
-            catch
-            {
-                LogUtils.Error("[Error] Grabbing gpu usage");
-                return 0f;
-            }
-        }
         public static UDPSender oscSender;
 
-        public static string GetSpotifySong()
+        //public static PerformanceCounter cpuCounter;
+        //public static PerformanceCounterCategory gpuCounterCategory;
+        //public static ManagementObjectSearcher mgmtObjectsearcher;
+
+        //public static void InitPerformaceCounters()
+        //{
+        //    cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
+
+        //    gpuCounterCategory = new PerformanceCounterCategory("GPU Engine");
+
+        //    ObjectQuery wql = new ObjectQuery("SELECT * FROM Win32_OperatingSystem");
+        //    mgmtObjectsearcher = new ManagementObjectSearcher(wql);
+        //}
+
+        //public static double GetCPUUsage()
+        //{
+        //    return Math.Round(cpuCounter.NextValue());
+        //}
+
+        //public static double GetGPUUsage()
+        //{ 
+        //    var gpuUsage = gpuCounterCategory
+        //            .GetInstanceNames()
+        //            .Where(counterName => counterName.EndsWith("engtype_3D"))
+        //            .SelectMany(counterName => gpuCounterCategory.GetCounters(counterName))
+        //            .Where(counter => counter.CounterName.Equals("Utilization Percentage"))
+        //            .ToList()
+        //            .Sum(x => x.NextValue());
+
+        //    return Math.Round(gpuUsage);
+        //}
+
+        //public static float GetMemoryUsage()
+        //{
+        //    ManagementObjectCollection results = mgmtObjectsearcher.Get();
+        //    var total = results["TotalVisibleMemorySize"];
+        //    var free = results["FreePhysicalMemory"];
+        //    var inuse = total - free;
+            
+        //    return Math.Round(inuse / total)
+        //}
+
+
+        public static string GetSpotifyMessage(bool flipFlop)
         {
-            //https://stackoverflow.com/questions/37854194/get-current-song-name-for-a-local-application
             var SpotifyProcess = Process.GetProcessesByName("Spotify").FirstOrDefault(p => !string.IsNullOrWhiteSpace(p.MainWindowTitle));
             if (SpotifyProcess == null)
             {
                 LogUtils.Error("[Error] Spotify is not opened");
             }
-            var wmiObject = new ManagementObjectSearcher("select * from Win32_OperatingSystem");
-            ManagementClass cimobject1 = new ManagementClass("Win32_PhysicalMemory");
-            ManagementObjectCollection moc1 = cimobject1.GetInstances();
-            double available = 0, capacity = 0;
-            foreach (ManagementObject mo1 in moc1)
-            {
-                capacity += ((Math.Round(Int64.Parse(mo1.Properties["Capacity"].Value.ToString()) / 1024 / 1024 / 1024.0, 1)));
-            }
-            moc1.Dispose();
-            cimobject1.Dispose();
 
+            var songName = SpotifyProcess.MainWindowTitle;
 
-            ManagementClass cimobject2 = new ManagementClass("Win32_PerfFormattedData_PerfOS_Memory");
-            ManagementObjectCollection moc2 = cimobject2.GetInstances();
-            foreach (ManagementObject mo2 in moc2)
+            if(songName == "Spotify Free" || songName == "Spotify Premium" || songName == "Spotify" || songName == "Advertisement")
             {
-                available += ((Math.Round(Int64.Parse(mo2.Properties["AvailableMBytes"].Value.ToString()) / 1024.0, 1)));
+                return "";
+            }
 
-            }
-            moc2.Dispose();
-            cimobject2.Dispose();
-            CurrentSong = SpotifyProcess.MainWindowTitle;
-            if (CurrentSong == "Spotify Free" || CurrentSong == "Spotify Premium")
-            {
-                return $"Idling on Spotify || CPU: {Math.Round(getCurrentCpuUsage())}% || RAM: {(Math.Round((capacity - available) / capacity * 100, 0)).ToString()}%  || GPU: { Math.Round(GetGPUUsage())}%";
-            }
-            if (CurrentSong == "Spotify" || CurrentSong == "Advertisement")
-            {
-                return $"Listening To A Ad :( || CPU: {Math.Round(getCurrentCpuUsage())}% || RAM: {(Math.Round((capacity - available) / capacity * 100, 0)).ToString()}%  || GPU: { Math.Round(GetGPUUsage())}%";
+            var pre = flipFlop ? '~' : '-';
+            var suf = flipFlop ? '~' : '-';
 
-            }
-            return $"{SpotifyProcess.MainWindowTitle} || CPU: {Math.Round(getCurrentCpuUsage())}% || RAM: {(Math.Round((capacity - available) / capacity * 100, 0)).ToString()}%  || GPU: { Math.Round(GetGPUUsage())}%";
+            return $"{pre}{songName}{suf}";
         }
-        public static float getCurrentCpuUsage()
-        {
-            PerformanceCounter cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
-            var s = cpuCounter.NextValue();
-            Thread.Sleep(1000);
-            return (dynamic)cpuCounter.NextValue();
-        }
-        public static float s;
-        public static string CurrentSongCheck = null;
 
-        public static string CurrentSong = null;
+        //public static string GetPCStatsMessage()
+        //{
+        //    var cpuUsage = GetCPUUsage();
+        //    var gpuUsage = GetGPUUsage();
+        //    var memoryUsage = GetMemoryUsage();
 
-        public static Task UpdateOSC()
+        //    return $"CPU: {cpuUsage}% || GPU: {gpuUsage}% || MEM: {memoryUsage}%";
+        //}
+
+        public static Task Spotify()
         {
+            string songName = "";
+            var flipFlop = true;
             while (true)
             {
-                oscSender.Send(new OscMessage("/chatbox/input", GetSpotifySong(), true, true));
-                LogUtils.Log("Sent Current Song!");
-                Thread.Sleep(10);
-                CurrentSongCheck = CurrentSong;
+                flipFlop = !flipFlop;
+                songName = GetSpotifyMessage(flipFlop);
+                //if(songName.Length > 0)
+                //{
+                    oscSender.Send(new OscMessage("/chatbox/input", songName, true));
+                //}
+                LogUtils.Log(songName);
+                Thread.Sleep(1500);
 
             }
         }
-        public static Task ClanTagChanger(string CustomText)
+
+        //public static Task PCStats()
+        //{
+        //    while(true)
+        //    {
+        //        oscSender.Send(new OscMessage("/chatbox/input", GetPCStatsMessage(), true, true));
+        //        LogUtils.Log("Sent Stats");
+        //        Thread.Sleep(500);
+        //    }
+        //}
+
+        public static Task TextScroll(string message)
         {
-            CustomText += " ";
-            string CurrentString = "";
-            int currentindex = 0;
+            //message += "     ";
             while (true)
             {
-                foreach (var cha in CustomText)
-                {
-                    currentindex += 1;
-                    CurrentString +=  cha;
-                    Console.WriteLine(CurrentString);
-
-                    oscSender.Send(new OscMessage("/chatbox/input", CurrentString, true, true));
-
-                    Thread.Sleep(2000);
-                    if (cha == ' ')
-                    {
-                        currentindex -= 1;
-
-                    }
-                }
-                foreach (char cha in CurrentString)
-                {
-                  var s =   CurrentString.Remove(currentindex);
-                    Console.WriteLine(s);
-                    oscSender.Send(new OscMessage("/chatbox/input", s, true, true));
-                    currentindex -= 1;
-                    Thread.Sleep(2000);
-
-
-                }
-                CurrentString = null;
+                oscSender.Send(new OscMessage("/chatbox/input", message, true));
+                LogUtils.Log(message);
+                message = String.Concat(message[1..], message.Substring(0,1));
+                Thread.Sleep(1500);
             }
         }
-        public static void Init()
-        {
-            if (!File.Exists(Environment.CurrentDirectory + "\\CustomName.txt"))
-            {
-                File.Create(Environment.CurrentDirectory + "\\CustomName.txt");
-                File.WriteAllText(Environment.CurrentDirectory + "\\CustomName.txt", "VRCOSCSPOTIFY"); 
-            }
-            if (File.Exists(Environment.CurrentDirectory + "\\CustomName.txt") && string.IsNullOrEmpty(File.ReadAllText(Environment.CurrentDirectory + "\\CustomName.txt")))
-            {
-                File.WriteAllText(Environment.CurrentDirectory + "\\CustomName.txt", "VRCOSCSPOTIFY");
-            }
-        }
-        public static void Redo()
-        {
-            
-            LogUtils.Clear();
-            LogUtils.Error("Please enter valid input\n");
 
-            LogUtils.Log("Options:\n1. Spotify and PC Stats || 2. Animated ClanTag (Must Edit CustomName.txt)");
-            var s = Console.ReadLine();
-            switch (s)
-            {
-                case "1":
-                    UpdateOSC();
-                    break;
-                case "2":
-                    ClanTagChanger(File.ReadAllText(Environment.CurrentDirectory + "\\CustomName.txt"));
-                    break;
-                default:
-
-                    Redo();
-                    break;
-            }
-        }
         static void Main(string[] args)
         {
-            oscSender = new UDPSender("127.0.0.1", 9000);
-            //     UpdateOSC();
-            Init();
             LogUtils.Logo();
-            LogUtils.Log("Options:\n1. Spotify and PC Stats || 2. Animated ClanTag (Must Edit CustomName.txt)");
-            var s = Console.ReadLine();
-            switch (s)
+            oscSender = new UDPSender("127.0.0.1", 9000);
+
+            LogUtils.Log("Options:\n1. Spotify || Text scroller");
+            var userInput = Console.ReadLine();
+            switch (userInput)
             {
                 case "1":
-                        UpdateOSC();
-                    break;
-                case "2":
-                    ClanTagChanger(File.ReadAllText(Environment.CurrentDirectory + "\\CustomName.txt"));
+                    Spotify();
                     break;
                 default:
-                    Redo();
+                    TextScroll(userInput);
                     break;
             }
-            //Console.WriteLine(GetSpotifySong());
         }
     }
 }
