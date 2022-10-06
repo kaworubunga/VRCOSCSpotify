@@ -69,8 +69,8 @@ namespace OSC_Funnies
                 return "";
             }
 
-            var pre = flipFlop ? '~' : '-';
-            var suf = flipFlop ? '~' : '-';
+            var pre = flipFlop ? '+' : '*';
+            var suf = flipFlop ? '+' : '*';
 
             return $"{pre}{songName}{suf}";
         }
@@ -114,12 +114,24 @@ namespace OSC_Funnies
 
         public static Task TextScroll(string message)
         {
-            //message += "     ";
             while (true)
             {
                 oscSender.Send(new OscMessage("/chatbox/input", message, true));
                 LogUtils.Log(message);
                 message = String.Concat(message[1..], message.Substring(0,1));
+                Thread.Sleep(1500);
+            }
+        }
+
+        public static Task TextAnim(string message)
+        {
+            int symbolIdx = 0;
+            string[] symbols = new string[4] {"!", "*", "<3", "+"};
+            while (true)
+            {
+                symbolIdx = (symbolIdx + 1) % symbols.Length;
+                string symbol = symbols[symbolIdx];
+                oscSender.Send(new OscMessage("/chatbox/input", $"{symbol} {message} {symbol}", true));
                 Thread.Sleep(1500);
             }
         }
@@ -137,7 +149,7 @@ namespace OSC_Funnies
                     Spotify();
                     break;
                 default:
-                    TextScroll(userInput);
+                    TextAnim(userInput);
                     break;
             }
         }
