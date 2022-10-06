@@ -1,12 +1,11 @@
-### Fork of VRCOSCSpotify
+### Fork of [VRCOSCSpotify](https://github.com/lenoobwastaken/VRCOSCSpotify)
 
 #### Pre-requisites
  - dotnet core 5.0 https://dotnet.microsoft.com/en-us/download/dotnet/5.0
  - Enable OSC in VRC radial menu (options/OSC/Enabled)
 
 #### VRCOSCSpotify
-A application that displays your pc stats and what you are listening to on spotify on VRChat using the OSC System
+A application that displays what you are listening to on spotify on VRChat using the OSC
 
 ### Preview
-![](https://i.imgur.com/9MZ1R15.jpg)
-
+![image](https://user-images.githubusercontent.com/109921778/193085155-b35d8758-78e4-48bd-a038-003a1cfecf5c.png)
